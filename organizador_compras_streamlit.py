@@ -12,6 +12,7 @@ import operator
 import os
 from datetime import datetime
 
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import streamlit as st
@@ -69,15 +70,40 @@ def limpar_tudo():
     salvar_dados()
 
 
+def importar_excel(arquivo):
+    """Lê um arquivo Excel (colunas 'nome', 'valor' e opcionalmente 'data') e retorna as compras encontradas."""
+    df = pd.read_excel(arquivo)
+    df.columns = [str(c).strip().lower() for c in df.columns]
+
+    registros = []
+    for _, linha in df.iterrows():
+        nome = str(linha.get("nome", "")).strip()
+        if not nome or nome.lower() == "nan":
+            continue
+
+        valor = float(linha.get("valor", 0) or 0)
+
+        data = linha.get("data")
+        if pd.isna(data) or not str(data).strip():
+            data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        else:
+            data_str = str(data)
+
+        registros.append({"nome": nome, "valor": valor, "data": data_str})
+
+    return registros
+
+
 def gerar_figura_grafico():
     nomes = [c["nome"] for c in st.session_state.compras]
     valores = [c["valor"] for c in st.session_state.compras]
 
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.bar(nomes, valores, color="#4CAF50")
-    ax.set_title("Gastos por item")
-    ax.set_ylabel("Valor (R$)")
-    ax.set_xlabel("Item")
+    fig, ax = plt.subplots(figsize=(5, 3.2))
+    ax.bar(nomes, valores, color="#90CAF9", edgecolor="#1E88E5")
+    ax.set_title("Gastos por item", fontsize=10)
+    ax.set_ylabel("Valor (R$)", fontsize=9)
+    ax.set_xlabel("Item", fontsize=9)
+    ax.tick_params(axis="both", labelsize=8)
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     fig.tight_layout()
     return fig
@@ -192,6 +218,26 @@ if pagina == "➕ Nova Compra":
                 except ValueError:
                     st.warning("Digite um valor numérico válido.")
 
+    with st.expander("📥 Importar compras de uma planilha Excel"):
+        st.caption("O arquivo deve ter as colunas 'nome' e 'valor' (a coluna 'data' é opcional).")
+        arquivo_excel = st.file_uploader("Selecione um arquivo Excel (.xlsx)", type=["xlsx", "xls"])
+        if arquivo_excel is not None:
+            try:
+                registros_importados = importar_excel(arquivo_excel)
+            except Exception:
+                registros_importados = None
+                st.error("Não foi possível ler o arquivo. Verifique se ele está no formato correto.")
+
+            if registros_importados:
+                st.write(f"{len(registros_importados)} item(ns) encontrado(s) no arquivo.")
+                if st.button("Importar itens para a lista"):
+                    st.session_state.compras.extend(registros_importados)
+                    salvar_dados()
+                    st.success("Itens importados com sucesso!")
+                    st.rerun()
+            elif registros_importados is not None:
+                st.warning("Nenhum item válido encontrado na planilha.")
+
     st.markdown("---")
 
     if not st.session_state.compras:
@@ -261,7 +307,7 @@ elif pagina == "📊 Gráfico de Gastos":
 
         if tipo_grafico == "Barras":
             fig = gerar_figura_grafico()
-            st.pyplot(fig)
+            st.pyplot(fig, use_container_width=False)
 
             buf_png = io.BytesIO()
             fig.savefig(buf_png, format="png")
@@ -355,19 +401,6 @@ elif pagina == "⚙️ Configurações":
         st.download_button("Baixar dados (JSON)", data=json_bytes, file_name="compras_data.json", mime="application/json")
     else:
         st.caption("Nenhum dado para exportar.")
-
-    st.subheader("Importar dados (JSON)")
-    arquivo = st.file_uploader("Selecione um arquivo JSON exportado anteriormente", type=["json"])
-    if arquivo is not None:
-        try:
-            dados_importados = json.load(arquivo)
-            if st.button("Confirmar importação"):
-                st.session_state.compras = dados_importados
-                salvar_dados()
-                st.success("Dados importados com sucesso!")
-                st.rerun()
-        except json.JSONDecodeError:
-            st.error("Arquivo JSON inválido.")
 
     st.markdown("---")
     st.subheader("Zona de risco")

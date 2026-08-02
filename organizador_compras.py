@@ -163,11 +163,12 @@ class OrganizadorCompras:
         nomes = [c["nome"] for c in self.compras]
         valores = [c["valor"] for c in self.compras]
 
-        fig, ax = plt.subplots(figsize=(8, 5))
-        ax.bar(nomes, valores, color="#4CAF50")
-        ax.set_title("Gastos por item")
-        ax.set_ylabel("Valor (R$)")
-        ax.set_xlabel("Item")
+        fig, ax = plt.subplots(figsize=(5, 3.2))
+        ax.bar(nomes, valores, color="#90CAF9", edgecolor="#1E88E5")
+        ax.set_title("Gastos por item", fontsize=10)
+        ax.set_ylabel("Valor (R$)", fontsize=9)
+        ax.set_xlabel("Item", fontsize=9)
+        ax.tick_params(axis="both", labelsize=8)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         fig.tight_layout()
         return fig
