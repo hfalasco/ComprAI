@@ -14,6 +14,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import pandas as pd
 import streamlit as st
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -67,6 +68,29 @@ def editar_compra(indice, nome, valor):
 def limpar_tudo():
     st.session_state.compras = []
     salvar_dados()
+
+
+def importar_excel(arquivo):
+    """Lê um arquivo Excel (colunas: nome, valor e opcionalmente data) e retorna a lista de compras."""
+    df = pd.read_excel(arquivo)
+    df.columns = [str(c).strip().lower() for c in df.columns]
+
+    if "nome" not in df.columns or "valor" not in df.columns:
+        raise ValueError("O arquivo precisa ter as colunas 'nome' e 'valor'.")
+
+    compras_importadas = []
+    for _, linha in df.iterrows():
+        nome = str(linha["nome"]).strip()
+        valor = float(linha["valor"])
+
+        if "data" in df.columns and pd.notna(linha["data"]):
+            data = str(linha["data"]).strip()
+        else:
+            data = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        compras_importadas.append({"nome": nome, "valor": valor, "data": data})
+
+    return compras_importadas
 
 
 def gerar_figura_grafico():
@@ -160,6 +184,28 @@ total_atual = sum(c["valor"] for c in st.session_state.compras)
 st.sidebar.markdown("---")
 st.sidebar.metric("Total gasto", f"R$ {total_atual:.2f}")
 st.sidebar.metric("Itens registrados", len(st.session_state.compras))
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("📥 Importar Excel")
+arquivo_excel = st.sidebar.file_uploader(
+    "Selecione um arquivo Excel (.xlsx)",
+    type=["xlsx", "xls"],
+    key="upload_excel",
+    label_visibility="collapsed",
+)
+if arquivo_excel is not None:
+    try:
+        compras_importadas = importar_excel(arquivo_excel)
+        st.sidebar.success(f"{len(compras_importadas)} item(ns) encontrado(s) no arquivo.")
+        if st.sidebar.button("Confirmar importação", key="confirmar_import_excel", use_container_width=True):
+            st.session_state.compras = compras_importadas
+            salvar_dados()
+            st.sidebar.success("Dados importados com sucesso!")
+            st.rerun()
+    except (ValueError, KeyError) as erro:
+        st.sidebar.error(f"Não foi possível importar: {erro}")
+    except Exception:
+        st.sidebar.error("Arquivo Excel inválido.")
 
 
 # ---------------- Página: Nova Compra ----------------
@@ -349,25 +395,7 @@ elif pagina == "📄 Relatório (PDF)":
 elif pagina == "⚙️ Configurações":
     st.title("⚙️ Configurações")
 
-    st.subheader("Exportar dados (JSON)")
-    if st.session_state.compras:
-        json_bytes = json.dumps(st.session_state.compras, ensure_ascii=False, indent=2).encode("utf-8")
-        st.download_button("Baixar dados (JSON)", data=json_bytes, file_name="compras_data.json", mime="application/json")
-    else:
-        st.caption("Nenhum dado para exportar.")
-
-    st.subheader("Importar dados (JSON)")
-    arquivo = st.file_uploader("Selecione um arquivo JSON exportado anteriormente", type=["json"])
-    if arquivo is not None:
-        try:
-            dados_importados = json.load(arquivo)
-            if st.button("Confirmar importação"):
-                st.session_state.compras = dados_importados
-                salvar_dados()
-                st.success("Dados importados com sucesso!")
-                st.rerun()
-        except json.JSONDecodeError:
-            st.error("Arquivo JSON inválido.")
+    st.caption("A importação de dados agora é feita por Excel, através do botão na barra lateral.")
 
     st.markdown("---")
     st.subheader("Zona de risco")
