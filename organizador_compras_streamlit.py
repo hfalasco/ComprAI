@@ -72,31 +72,12 @@ def limpar_tudo():
 
 
 def importar_excel(arquivo):
-<<<<<<< HEAD
-    """Lê um arquivo Excel (colunas: nome, valor e opcionalmente data) e retorna a lista de compras."""
+    """Lê um arquivo Excel (colunas 'nome', 'valor' e opcionalmente 'data') e retorna as compras encontradas."""
     df = pd.read_excel(arquivo)
     df.columns = [str(c).strip().lower() for c in df.columns]
 
     if "nome" not in df.columns or "valor" not in df.columns:
         raise ValueError("O arquivo precisa ter as colunas 'nome' e 'valor'.")
-
-    compras_importadas = []
-    for _, linha in df.iterrows():
-        nome = str(linha["nome"]).strip()
-        valor = float(linha["valor"])
-
-        if "data" in df.columns and pd.notna(linha["data"]):
-            data = str(linha["data"]).strip()
-        else:
-            data = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-        compras_importadas.append({"nome": nome, "valor": valor, "data": data})
-
-    return compras_importadas
-=======
-    """Lê um arquivo Excel (colunas 'nome', 'valor' e opcionalmente 'data') e retorna as compras encontradas."""
-    df = pd.read_excel(arquivo)
-    df.columns = [str(c).strip().lower() for c in df.columns]
 
     registros = []
     for _, linha in df.iterrows():
@@ -115,7 +96,6 @@ def importar_excel(arquivo):
         registros.append({"nome": nome, "valor": valor, "data": data_str})
 
     return registros
->>>>>>> a5d299168114f556f6d38b85ec995e496e90b963
 
 
 def gerar_figura_grafico():
@@ -441,16 +421,14 @@ elif pagina == "📄 Relatório (PDF)":
 elif pagina == "⚙️ Configurações":
     st.title("⚙️ Configurações")
 
-<<<<<<< HEAD
     st.caption("A importação de dados agora é feita por Excel, através do botão na barra lateral.")
-=======
+
     st.subheader("Exportar dados (JSON)")
     if st.session_state.compras:
         json_bytes = json.dumps(st.session_state.compras, ensure_ascii=False, indent=2).encode("utf-8")
         st.download_button("Baixar dados (JSON)", data=json_bytes, file_name="compras_data.json", mime="application/json")
     else:
         st.caption("Nenhum dado para exportar.")
->>>>>>> a5d299168114f556f6d38b85ec995e496e90b963
 
     st.markdown("---")
     st.subheader("Zona de risco")
